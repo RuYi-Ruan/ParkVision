@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 import AppLayout from "@/layout/index.vue";
+import { getToken } from "@/utils/auth";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -9,7 +10,7 @@ const router = createRouter({
       path: "/login",
       name: "login",
       component: () => import("@/views/login/Login.vue"),
-      meta: { title: "登录" },
+      meta: { title: "登录", public: true },
     },
     {
       path: "/",
@@ -69,8 +70,29 @@ const router = createRouter({
   ],
 });
 
+router.beforeEach((to) => {
+  // 当前阶段先用 token 是否存在作为最轻量的登录判断依据，
+  // 这样在权限体系尚未完全落地前，也能保证基础页面受保护。
+  const hasToken = Boolean(getToken());
+  const isPublic = Boolean(to.meta.public);
+
+  if (!hasToken && !isPublic) {
+    return {
+      path: "/login",
+      query: { redirect: to.fullPath },
+    };
+  }
+
+  if (hasToken && to.path === "/login") {
+    return "/dashboard";
+  }
+
+  return true;
+});
+
 router.afterEach((to) => {
-  document.title = `${to.meta.title ?? "ParkVision"} - ParkVision`;
+  // 路由切换后同步更新页面标题，便于演示时保持界面完整度。
+  document.title = `${String(to.meta.title ?? "ParkVision")} · ParkVision`;
 });
 
 export default router;

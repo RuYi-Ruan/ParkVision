@@ -1,12 +1,17 @@
+"""dashboard 模块的接口视图。"""
+
 from rest_framework.views import APIView
 
 from common.response import api_response
 
-from .services import get_dashboard_module_info
+from .services import get_dashboard_module_info, get_dashboard_overview
 
 
 class DashboardModuleView(APIView):
-    def get(self, request):
-        return api_response(get_dashboard_module_info())
+    """返回模块信息或首页统计数据。"""
 
-# Create your views here.
+    def get(self, request):
+        # mode=module 用于检查模块状态；默认分支才是首页真实消费的数据。
+        if request.query_params.get("mode") == "module":
+            return api_response(get_dashboard_module_info())
+        return api_response(get_dashboard_overview())

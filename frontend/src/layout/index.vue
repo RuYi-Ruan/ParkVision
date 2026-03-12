@@ -4,7 +4,11 @@
     <div class="app-main">
       <Header />
       <main class="app-content">
-        <RouterView />
+        <RouterView v-slot="{ Component }">
+          <Transition name="page-fade" mode="out-in">
+            <component :is="Component" />
+          </Transition>
+        </RouterView>
       </main>
       <Footer />
     </div>
