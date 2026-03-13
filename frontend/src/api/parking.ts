@@ -1,6 +1,6 @@
 import { del, get, post, put } from "@/utils/request";
 import type { ListQuery } from "@/types/api";
-import type { ParkingMonitorItem, ParkingSpaceItem } from "@/types/domain";
+import type { ParkingMonitorItem, ParkingSpaceDetailItem, ParkingSpaceItem } from "@/types/domain";
 
 export type ParkingSpaceFormData = {
   space_code: string;
@@ -14,6 +14,11 @@ export type ParkingSpaceFormData = {
 export function getParkingSpaces(params?: ListQuery) {
   // 车位列表的筛选参数与页面工具栏一一对应，方便后续继续扩展。
   return get<ParkingSpaceItem[]>("/parking/", { params });
+}
+
+export function getParkingSpaceDetail(id: number) {
+  // 车位详情页会读取车位档案与最近停车记录摘要。
+  return get<ParkingSpaceDetailItem>(`/parking/${id}/`);
 }
 
 export function createParkingSpace(data: ParkingSpaceFormData) {

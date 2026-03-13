@@ -116,7 +116,13 @@
 .sidebar__icon {
   display: inline-grid;
   width: 22px;
+  height: 22px;
   place-items: center;
+}
+
+.sidebar__icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .topbar,
@@ -134,6 +140,11 @@
   display: flex;
   align-items: center;
   gap: 14px;
+}
+
+.topbar__meta {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .topbar__eyebrow {
@@ -177,6 +188,36 @@
   color: var(--brand);
   font-size: 13px;
   font-weight: 700;
+}
+
+.topbar__scope {
+  display: inline-flex;
+  max-width: 360px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(38, 73, 59, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.topbar__scope-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(62, 107, 87, 0.12);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.topbar__scope-copy {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .topbar__avatar {
@@ -385,6 +426,26 @@
   font-size: 28px;
 }
 
+.dashboard-stat-button {
+  padding: 0;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dashboard-stat-button {
+  background: transparent;
+}
+
+.dashboard-stat-button .stat-card {
+  height: 100%;
+}
+
+.dashboard-stat-button:hover .stat-card {
+  transform: translateY(-2px);
+  box-shadow: 0 24px 48px rgba(24, 46, 37, 0.08);
+}
+
 .dashboard__grid,
 .detect-grid,
 .detail-grid,
@@ -530,6 +591,21 @@
   overflow: hidden;
 }
 
+.table-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 8px;
+}
+
+.table-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(38, 73, 59, 0.2);
+}
+
 .table-action-wrap {
   position: relative;
 }
@@ -541,6 +617,102 @@
   gap: 16px;
 }
 
+.toolbar-panel--records {
+  align-items: flex-end;
+}
+
+.records-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.settings-grid--config {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.settings-section {
+  display: grid;
+  gap: 18px;
+}
+
+.settings-updated-at {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.vehicle-record-chip-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.vehicle-record-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(38, 73, 59, 0.08);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.records-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.records-summary-card__label {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.records-summary-card__value {
+  font-size: 32px;
+  line-height: 1.1;
+}
+
+.records-summary-card__foot {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.records-filter-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(240px, 1.5fr) repeat(3, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.toolbar-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toolbar-field__label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
 .toolbar-search {
   width: min(420px, 100%);
   padding: 14px 16px;
@@ -548,6 +720,32 @@
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.78);
   outline: none;
+}
+
+.toolbar-search--date,
+.toolbar-select {
+  width: 100%;
+}
+
+.toolbar-select {
+  height: 50px;
+  padding: 0 16px;
+  border: 1px solid rgba(38, 73, 59, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--text);
+  outline: none;
+}
+
+.toolbar-summary--records {
+  min-width: 140px;
+  text-align: right;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .toolbar-summary {
@@ -583,6 +781,40 @@
 .table-header--vehicles,
 .table-row--vehicles {
   grid-template-columns: 1.1fr 1fr 1fr 1fr 0.8fr;
+}
+
+.table-header--records-extended,
+.table-row--records-extended {
+  grid-template-columns: 1.05fr 1fr 1fr 0.9fr 0.8fr 0.8fr 0.8fr 0.8fr;
+}
+
+.table-header--users,
+.table-row--users {
+  min-width: 1180px;
+  grid-template-columns: 1.1fr 1fr 1fr 1fr 1.1fr 0.9fr 1.2fr;
+}
+
+.table-header--users > :nth-child(6),
+.table-row--users > :nth-child(6),
+.table-header--users > :last-child,
+.table-row--users > :last-child {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  justify-self: stretch;
+  text-align: center;
+}
+
+.table-header--records-extended > :nth-child(5),
+.table-row--records-extended > :nth-child(5),
+.table-header--records-extended > :nth-child(6),
+.table-row--records-extended > :nth-child(6),
+.table-header--records-extended > :nth-child(7),
+.table-row--records-extended > :nth-child(7),
+.table-header--records-extended > :nth-child(8),
+.table-row--records-extended > :nth-child(8) {
+  justify-self: center;
 }
 
 .table-header--manage,
@@ -711,6 +943,20 @@
   font-size: 13px;
 }
 
+.records-rule-panel {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 20px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.records-rule-panel strong {
+  color: var(--brand);
+  white-space: nowrap;
+}
+
 .manage-form {
   display: grid;
   gap: 16px;
@@ -764,6 +1010,21 @@
   background: rgba(255, 255, 255, 0.7);
   color: var(--brand);
   cursor: pointer;
+}
+
+.table-link-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.table-link-button:hover {
+  color: var(--brand);
 }
 
 .table-action--primary {
@@ -1228,10 +1489,32 @@
     width: 100%;
   }
 
+  .records-filter-grid {
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
+
+  .records-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar-summary--records {
+    min-width: auto;
+    text-align: left;
+  }
+
+  .toolbar-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .table-header,
   .table-row,
   .table-header--records,
   .table-row--records,
+  .table-header--records-extended,
+  .table-row--records-extended,
   .table-header--vehicles,
   .table-row--vehicles,
   .table-header--manage,

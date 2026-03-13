@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "apps.records",
     "apps.detection",
     "apps.dashboard",
+    "apps.system_config",
 ]
 
 # 将 CORS 中间件前置，便于前端开发服务器的跨域请求先被正确放行。

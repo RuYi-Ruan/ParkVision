@@ -18,13 +18,24 @@
             {{ item.label }}
           </button>
         </div>
-        <button type="button" class="table-action table-action--primary" @click="openCreateDrawer">新增车位</button>
+        <button
+          v-if="canManageSpaces"
+          type="button"
+          class="table-action table-action--primary"
+          @click="openCreateDrawer"
+        >
+          新增车位
+        </button>
       </div>
     </article>
 
     <article class="panel toolbar-panel">
       <input v-model.trim="keyword" class="toolbar-search" type="text" placeholder="搜索车位编号或区域" />
       <div class="toolbar-summary">共筛选出 {{ filteredSpaces.length }} 个车位</div>
+    </article>
+
+    <article v-if="!canManageSpaces" class="panel">
+      <p class="manage-panel__error">当前账号为只读模式，可查看车位详情与占用情况，但不能新增、编辑或删除车位。</p>
     </article>
 
     <article class="panel table-panel">
@@ -36,30 +47,36 @@
         <span>操作</span>
       </div>
       <div v-for="space in filteredSpaces" :key="space.id" class="table-row table-row--manage">
-        <strong>{{ space.code }}</strong>
+        <button type="button" class="table-link-button" @click="viewSpaceDetail(space.id)">
+          {{ space.code }}
+        </button>
         <span>{{ space.zone }}</span>
         <span class="status-dot" :class="`status-dot--${space.type}`">{{ space.status }}</span>
         <span>{{ space.updatedAt }}</span>
         <div class="table-actions">
-          <button type="button" class="table-action" @click="startEdit(space)">编辑</button>
-          <div class="table-action-wrap">
-            <button type="button" class="table-action table-action--danger" @click="toggleDeleteConfirm(space.id)">
-              删除
-            </button>
-            <div v-if="confirmingDeleteId === space.id" class="popconfirm">
-              <p class="popconfirm__title">确认删除车位 {{ space.code }} 吗？</p>
-              <div class="popconfirm__actions">
-                <button type="button" class="table-action" @click="confirmingDeleteId = null">取消</button>
-                <button type="button" class="table-action table-action--danger" @click="handleDelete(space)">确认</button>
+          <template v-if="canManageSpaces">
+            <button type="button" class="table-action" @click="startEdit(space)">编辑</button>
+            <div class="table-action-wrap">
+              <button type="button" class="table-action table-action--danger" @click="toggleDeleteConfirm(space.id)">
+                删除
+              </button>
+              <div v-if="confirmingDeleteId === space.id" class="popconfirm">
+                <p class="popconfirm__title">确认删除车位 {{ space.code }} 吗？</p>
+                <div class="popconfirm__actions">
+                  <button type="button" class="table-action" @click="confirmingDeleteId = null">取消</button>
+                  <button type="button" class="table-action table-action--danger" @click="handleDelete(space)">确认</button>
+                </div>
               </div>
             </div>
-          </div>
+          </template>
+          <button v-else type="button" class="table-action table-action--link" @click="viewSpaceDetail(space.id)">查看详情</button>
         </div>
       </div>
       <div v-if="!filteredSpaces.length" class="table-empty">没有符合条件的车位数据。</div>
     </article>
 
     <RightDrawer
+      v-if="canManageSpaces"
       v-model="drawerVisible"
       :title="editingId ? '编辑车位' : '新增车位'"
       description="抽屉式编辑可以让列表保持在视线范围内，适合管理类页面连续操作。"
@@ -109,7 +126,7 @@
         </label>
         <label class="manage-form__wide">
           <span>备注</span>
-          <input v-model.trim="form.remark" type="text" placeholder="可填写充电桩、维修中等说明" />
+          <input v-model.trim="form.remark" type="text" placeholder="可填写充电桩、维护中等说明" />
         </label>
       </div>
 
@@ -127,6 +144,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
 import RightDrawer from "@/components/RightDrawer.vue";
 import {
@@ -138,12 +156,16 @@ import {
 } from "@/api/parking";
 import { parkingSpaces as parkingSpacesMock, parkingStatusFilters } from "@/mock/parking";
 import { useAppStore } from "@/store/app";
+import { useUserStore } from "@/store/user";
 import type { ParkingSpaceItem } from "@/types/domain";
 
 type SpaceStatus = "all" | "free" | "busy" | "warning";
 type SpaceFormErrors = Record<"space_code" | "area_code" | "space_type", string>;
 
 const appStore = useAppStore();
+const userStore = useUserStore();
+const route = useRoute();
+const router = useRouter();
 const keyword = ref("");
 const activeStatus = ref<SpaceStatus>("all");
 const spaces = ref<ParkingSpaceItem[]>(parkingSpacesMock);
@@ -178,6 +200,28 @@ const filteredSpaces = computed(() => {
     return matchStatus && matchKeyword;
   });
 });
+
+const canManageSpaces = computed(() => userStore.canManageBusiness);
+
+function normalizeSpaceStatus(value: unknown): SpaceStatus {
+  return value === "free" || value === "busy" || value === "warning" ? value : "all";
+}
+
+function applyQueryFilters() {
+  // 车位页允许从首页和监控页带区域或状态条件进入，便于形成页面联动。
+  keyword.value = typeof route.query.keyword === "string" ? route.query.keyword : "";
+  activeStatus.value = normalizeSpaceStatus(route.query.status);
+}
+
+async function syncQueryAndFetch() {
+  await router.replace({
+    query: {
+      keyword: keyword.value || undefined,
+      status: activeStatus.value === "all" ? undefined : activeStatus.value,
+    },
+  });
+  await fetchSpaces();
+}
 
 function clearErrors() {
   errors.space_code = "";
@@ -216,6 +260,10 @@ function resetForm() {
 }
 
 function openCreateDrawer() {
+  if (!canManageSpaces.value) {
+    appStore.showMessage("当前账号没有新增车位的权限。", "warning");
+    return;
+  }
   // 新增时先清空旧编辑状态，再打开抽屉。
   resetForm();
   drawerVisible.value = true;
@@ -225,7 +273,16 @@ function closeDrawer() {
   drawerVisible.value = false;
 }
 
+function viewSpaceDetail(id: number) {
+  // 车位详情页承接车位列表和监控页等多个入口。
+  void router.push(`/parking/spaces/${id}`);
+}
+
 function startEdit(space: ParkingSpaceItem) {
+  if (!canManageSpaces.value) {
+    appStore.showMessage("当前账号没有编辑车位的权限。", "warning");
+    return;
+  }
   // 编辑时把列表项映射回表单字段，保证操作路径足够直接。
   editingId.value = space.id;
   clearErrors();
@@ -239,6 +296,10 @@ function startEdit(space: ParkingSpaceItem) {
 }
 
 function toggleDeleteConfirm(id: number) {
+  if (!canManageSpaces.value) {
+    appStore.showMessage("当前账号没有删除车位的权限。", "warning");
+    return;
+  }
   // 同一时间只允许展开一个删除确认框，避免页面上出现多个确认气泡。
   confirmingDeleteId.value = confirmingDeleteId.value === id ? null : id;
 }
@@ -296,7 +357,7 @@ async function handleDelete(space: ParkingSpaceItem) {
 }
 
 watch([keyword, activeStatus], () => {
-  void fetchSpaces();
+  void syncQueryAndFetch();
 });
 
 watch(drawerVisible, (visible) => {
@@ -306,7 +367,15 @@ watch(drawerVisible, (visible) => {
   }
 });
 
+watch(
+  () => route.query,
+  () => {
+    applyQueryFilters();
+  },
+);
+
 onMounted(() => {
+  applyQueryFilters();
   void fetchSpaces();
 });
 </script>

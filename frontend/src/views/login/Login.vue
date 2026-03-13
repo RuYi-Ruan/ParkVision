@@ -120,9 +120,15 @@ async function handleLogin() {
       password: form.password,
     });
 
-    // 先写入 token，再跳转页面，这样路由守卫不会拦截目标页。
+    // 先写入 token 和用户档案，再跳转页面，避免路由守卫误判未登录。
     userStore.setToken(response.data.token);
-    userStore.setProfile(response.data.username, response.data.role_name);
+    userStore.setProfile({
+      id: response.data.id,
+      username: response.data.username,
+      displayName: response.data.displayName,
+      role: response.data.role,
+      roleName: response.data.roleName,
+    });
 
     const redirect = typeof route.query.redirect === "string" ? route.query.redirect : "/dashboard";
     void router.push(redirect);

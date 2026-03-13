@@ -1,6 +1,6 @@
 import { del, get, post, put } from "@/utils/request";
 import type { ListQuery } from "@/types/api";
-import type { VehicleItem } from "@/types/domain";
+import type { VehicleDetailItem, VehicleItem } from "@/types/domain";
 
 export type VehicleFormData = {
   plate_number: string;
@@ -15,6 +15,11 @@ export type VehicleFormData = {
 export function getVehicleList(params?: ListQuery) {
   // 车辆管理当前以列表读取为主，并逐步扩展到完整管理能力。
   return get<VehicleItem[]>("/vehicles/", { params });
+}
+
+export function getVehicleDetail(id: number) {
+  // 车辆详情页会读取车辆档案与最近停车记录摘要。
+  return get<VehicleDetailItem>(`/vehicles/${id}/`);
 }
 
 export function createVehicle(data: VehicleFormData) {

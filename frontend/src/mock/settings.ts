@@ -1,7 +1,24 @@
-import type { SystemSetting } from "./types";
+import type { SystemConfigData } from "@/types/domain";
 
-export const systemSettings: SystemSetting[] = [
-  { label: "后端接口", value: "127.0.0.1:8000", desc: "当前开发环境 API 地址。" },
-  { label: "识别服务", value: "待接入", desc: "后续连接 AI 推理模块。" },
-  { label: "默认园区", value: "主停车区 A 区", desc: "用于后台首页初始展示。" },
-];
+// 系统设置的本地兜底数据，与后端接口结构保持一致。
+export const systemConfigMock: SystemConfigData = {
+  parking_rule: {
+    free_minutes: 15,
+    fee_per_hour: "6.00",
+    daily_cap: "48.00",
+    overdue_hours: 24,
+  },
+  recognition: {
+    detect_confidence: "0.45",
+    ocr_confidence: "0.60",
+    yolo_model_path: "ai/weights/vehicle_yolo.pt",
+    plate_model_path: "ai/weights/plate_yolo.pt",
+  },
+  runtime: {
+    default_zone: "主停车区 A 区",
+    monitor_refresh_seconds: 30,
+    auto_export_days: 30,
+    retain_days: 365,
+  },
+  updated_at: "2026-03-13 18:00",
+};

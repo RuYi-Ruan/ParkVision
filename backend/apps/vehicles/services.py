@@ -1,17 +1,25 @@
-"""vehicles 模块的服务层。
+"""车辆模块的服务层。
 
-这里统一封装车辆的查询、创建、更新和删除逻辑，避免视图层直接操作模型。
+这里统一封装车辆的查询、创建、更新、删除和详情聚合逻辑，
+避免视图层直接操作模型，方便后续继续扩展到更完整的车辆档案。
 """
 
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import exceptions
 
+from apps.records.models import ParkingRecord
 from apps.vehicles.models import Vehicle
 
 VEHICLE_STATUS_TYPE_MAP = {
     1: ("已备案", "free"),
     0: ("停用", "warning"),
+}
+
+RECORD_STATUS_TYPE_MAP = {
+    "在场": "busy",
+    "已离场": "free",
+    "异常": "warning",
 }
 
 
@@ -24,7 +32,7 @@ def get_vehicle_module_info():
 
 
 def _serialize_vehicle(vehicle: Vehicle) -> dict:
-    """将车辆模型转换为前端车辆管理页需要的结构。"""
+    """将车辆模型转换为车辆管理列表所需结构。"""
     status_label, status_type = VEHICLE_STATUS_TYPE_MAP.get(vehicle.status, ("异常", "warning"))
     return {
         "id": vehicle.id,
@@ -37,6 +45,40 @@ def _serialize_vehicle(vehicle: Vehicle) -> dict:
         "status": status_label,
         "statusValue": vehicle.status,
         "type": status_type,
+    }
+
+
+def _format_datetime(value):
+    """统一格式化车辆详情里用到的时间字段。"""
+    if value is None:
+        return "--"
+    return timezone.localtime(value).strftime("%Y-%m-%d %H:%M")
+
+
+def _format_duration(record: ParkingRecord) -> str:
+    """将停车时长格式化为中文可读文本。"""
+    if record.record_status == "在场" or not record.duration_minutes:
+        return "进行中"
+
+    hours, minutes = divmod(record.duration_minutes, 60)
+    if hours > 0 and minutes > 0:
+        return f"{hours} 小时 {minutes} 分钟"
+    if hours > 0:
+        return f"{hours} 小时"
+    return f"{minutes} 分钟"
+
+
+def _serialize_recent_record(record: ParkingRecord) -> dict:
+    """整理车辆详情页中的最近停车记录摘要。"""
+    return {
+        "id": record.id,
+        "recordNo": record.record_no,
+        "enterAt": _format_datetime(record.entry_time),
+        "leaveAt": _format_datetime(record.exit_time),
+        "duration": _format_duration(record),
+        "status": record.record_status,
+        "type": RECORD_STATUS_TYPE_MAP.get(record.record_status, "warning"),
+        "amount": f"{record.amount:.2f}",
     }
 
 
@@ -69,6 +111,30 @@ def list_vehicles(keyword="", status=""):
         queryset = queryset.none()
 
     return [_serialize_vehicle(vehicle) for vehicle in queryset]
+
+
+def get_vehicle_detail(pk: int) -> dict:
+    """返回单辆车的档案详情与最近停车记录。"""
+    vehicle = _get_vehicle_or_raise(pk)
+    status_label, status_type = VEHICLE_STATUS_TYPE_MAP.get(vehicle.status, ("异常", "warning"))
+    records = list(ParkingRecord.objects.filter(vehicle_id=vehicle.id).order_by("-entry_time")[:5])
+    active_record = next((record for record in records if record.record_status == "在场"), None)
+
+    return {
+        "id": vehicle.id,
+        "plate": vehicle.plate_number,
+        "owner": vehicle.owner_name,
+        "ownerPhone": vehicle.owner_phone or "--",
+        "category": vehicle.vehicle_type,
+        "color": vehicle.color or "--",
+        "status": status_label,
+        "type": status_type,
+        "remark": vehicle.remark or "暂无备注",
+        "createdAt": _format_datetime(vehicle.created_at),
+        "updatedAt": _format_datetime(vehicle.updated_at),
+        "currentRecordId": active_record.id if active_record else None,
+        "recentRecords": [_serialize_recent_record(record) for record in records],
+    }
 
 
 def create_vehicle(validated_data: dict) -> dict:
@@ -106,7 +172,9 @@ def update_vehicle(pk: int, validated_data: dict) -> dict:
     vehicle.status = validated_data["status"]
     vehicle.remark = validated_data.get("remark") or None
     vehicle.updated_at = timezone.now()
-    vehicle.save(update_fields=["plate_number", "owner_name", "owner_phone", "vehicle_type", "color", "status", "remark", "updated_at"])
+    vehicle.save(
+        update_fields=["plate_number", "owner_name", "owner_phone", "vehicle_type", "color", "status", "remark", "updated_at"]
+    )
     return _serialize_vehicle(vehicle)
 
 

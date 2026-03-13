@@ -2,6 +2,7 @@ import axios from "axios";
 import type { AxiosRequestConfig } from "axios";
 
 import type { ApiResponse } from "@/types/api";
+import { getToken } from "@/utils/auth";
 
 // 统一创建 axios 实例，避免每个接口文件重复配置 baseURL 和超时时间。
 const request = axios.create({
@@ -9,9 +10,19 @@ const request = axios.create({
   timeout: 10000,
 });
 
+request.interceptors.request.use((config) => {
+  // 当前项目的轻量权限控制依赖 token 恢复用户身份，因此这里统一附带请求头。
+  const token = getToken();
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 request.interceptors.response.use(
   // 后端已经约定返回统一结构，这里直接取 response.data，
-  // 让业务代码只面对项目自己的响应格式。
+  // 让业务代码只面向项目自己的响应格式。
   (response) => response.data,
   (error) => Promise.reject(error),
 );

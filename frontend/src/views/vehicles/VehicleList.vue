@@ -18,13 +18,24 @@
             {{ item.label }}
           </button>
         </div>
-        <button type="button" class="table-action table-action--primary" @click="openCreateDrawer">新增车辆</button>
+        <button
+          v-if="canManageVehicles"
+          type="button"
+          class="table-action table-action--primary"
+          @click="openCreateDrawer"
+        >
+          新增车辆
+        </button>
       </div>
     </article>
 
     <article class="panel toolbar-panel">
       <input v-model.trim="keyword" class="toolbar-search" type="text" placeholder="搜索车牌号、车主或车辆类型" />
       <div class="toolbar-summary">共筛选出 {{ filteredVehicles.length }} 辆车</div>
+    </article>
+
+    <article v-if="!canManageVehicles" class="panel">
+      <p class="manage-panel__error">当前账号为只读模式，可查看车辆详情和停车记录，但不能新增、编辑或删除车辆。</p>
     </article>
 
     <article class="panel table-panel">
@@ -37,38 +48,48 @@
         <span>操作</span>
       </div>
       <div v-for="vehicle in filteredVehicles" :key="vehicle.id" class="table-row table-row--vehicles table-row--manage">
-        <strong>{{ vehicle.plate }}</strong>
+        <button type="button" class="table-link-button" @click="viewVehicleDetail(vehicle.id)">
+          {{ vehicle.plate }}
+        </button>
         <span>{{ vehicle.owner }}</span>
         <span>{{ vehicle.category }}</span>
         <span>{{ vehicle.space }}</span>
         <span class="status-dot status-dot--compact" :class="`status-dot--${vehicle.type}`">{{ vehicle.status }}</span>
         <div class="table-actions table-actions--end">
-          <div class="table-action-group">
+          <div v-if="canManageVehicles" class="table-action-group">
             <button type="button" class="table-action table-action--link" @click="viewVehicleRecords(vehicle.plate)">查看记录</button>
-            <button type="button" class="table-action table-action--link table-action--link-edit" @click="startEdit(vehicle)">编辑</button>
-            <div class="table-action-wrap">
             <button
               type="button"
-              class="table-action table-action--link table-action--link-danger"
-              @click="toggleDeleteConfirm(vehicle.id)"
+              class="table-action table-action--link table-action--link-edit"
+              @click="startEdit(vehicle)"
             >
-              删除
+              编辑
             </button>
-            <div v-if="confirmingDeleteId === vehicle.id" class="popconfirm">
-              <p class="popconfirm__title">确认删除车辆 {{ vehicle.plate }} 吗？</p>
-              <div class="popconfirm__actions">
-                <button type="button" class="table-action" @click="confirmingDeleteId = null">取消</button>
-                <button type="button" class="table-action table-action--danger" @click="handleDelete(vehicle)">确认</button>
+            <div class="table-action-wrap">
+              <button
+                type="button"
+                class="table-action table-action--link table-action--link-danger"
+                @click="toggleDeleteConfirm(vehicle.id)"
+              >
+                删除
+              </button>
+              <div v-if="confirmingDeleteId === vehicle.id" class="popconfirm">
+                <p class="popconfirm__title">确认删除车辆 {{ vehicle.plate }} 吗？</p>
+                <div class="popconfirm__actions">
+                  <button type="button" class="table-action" @click="confirmingDeleteId = null">取消</button>
+                  <button type="button" class="table-action table-action--danger" @click="handleDelete(vehicle)">确认</button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+          <button v-else type="button" class="table-action table-action--link" @click="viewVehicleRecords(vehicle.plate)">查看记录</button>
         </div>
       </div>
       <div v-if="!filteredVehicles.length" class="table-empty">没有符合条件的车辆数据。</div>
     </article>
 
     <RightDrawer
+      v-if="canManageVehicles"
       v-model="drawerVisible"
       :title="editingId ? '编辑车辆' : '新增车辆'"
       description="在抽屉中维护车辆信息，列表会保持在当前视线范围内。"
@@ -151,12 +172,14 @@ import RightDrawer from "@/components/RightDrawer.vue";
 import { createVehicle, deleteVehicle, getVehicleList, updateVehicle, type VehicleFormData } from "@/api/vehicle";
 import { vehicleStatusFilters, vehicles as vehiclesMock } from "@/mock/vehicles";
 import { useAppStore } from "@/store/app";
+import { useUserStore } from "@/store/user";
 import type { VehicleItem } from "@/types/domain";
 
 type VehicleStatus = "all" | "free" | "warning";
 type VehicleFormErrors = Record<"plate_number" | "owner_name" | "owner_phone" | "vehicle_type", string>;
 
 const appStore = useAppStore();
+const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
 const keyword = ref("");
@@ -197,6 +220,8 @@ const filteredVehicles = computed(() => {
   });
 });
 
+const canManageVehicles = computed(() => userStore.canManageBusiness);
+
 function normalizeVehicleStatus(value: unknown): VehicleStatus {
   return value === "free" || value === "warning" ? value : "all";
 }
@@ -215,6 +240,11 @@ async function syncQueryAndFetch() {
     },
   });
   await fetchVehicles();
+}
+
+function viewVehicleDetail(id: number) {
+  // 车辆详情页承接记录详情、车辆列表等多个入口。
+  void router.push(`/vehicles/${id}`);
 }
 
 function viewVehicleRecords(plate: string) {
@@ -272,6 +302,10 @@ function resetForm() {
 }
 
 function openCreateDrawer() {
+  if (!canManageVehicles.value) {
+    appStore.showMessage("当前账号没有新增车辆的权限。", "warning");
+    return;
+  }
   // 新增时先清空旧编辑状态，再打开抽屉。
   resetForm();
   drawerVisible.value = true;
@@ -282,6 +316,10 @@ function closeDrawer() {
 }
 
 function startEdit(vehicle: VehicleItem) {
+  if (!canManageVehicles.value) {
+    appStore.showMessage("当前账号没有编辑车辆的权限。", "warning");
+    return;
+  }
   // 编辑时把列表项映射回表单字段，保证操作路径足够直接。
   editingId.value = vehicle.id;
   clearErrors();
@@ -296,6 +334,10 @@ function startEdit(vehicle: VehicleItem) {
 }
 
 function toggleDeleteConfirm(id: number) {
+  if (!canManageVehicles.value) {
+    appStore.showMessage("当前账号没有删除车辆的权限。", "warning");
+    return;
+  }
   // 同一时间只允许展开一个删除确认框，避免页面上出现多个确认气泡。
   confirmingDeleteId.value = confirmingDeleteId.value === id ? null : id;
 }

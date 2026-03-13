@@ -15,15 +15,21 @@
     </div>
 
     <section class="page-grid page-grid--stats">
-      <StatCard
+      <button
         v-for="item in stats"
         :key="item.label"
-        :label="item.label"
-        :value="item.value"
-        :trend="item.trend"
-        :footnote="item.footnote"
-        :type="item.type"
-      />
+        type="button"
+        class="dashboard-stat-button"
+        @click="goToStatTarget(item.label)"
+      >
+        <StatCard
+          :label="item.label"
+          :value="item.value"
+          :trend="item.trend"
+          :footnote="item.footnote"
+          :type="item.type"
+        />
+      </button>
     </section>
 
     <section class="dashboard__grid">
@@ -31,7 +37,7 @@
         <div class="section-heading">
           <div>
             <h2>分区占用</h2>
-            <p>按停车区查看当前空闲和占用状态。</p>
+            <p>按停车区查看当前空闲和占用状态，并支持直接跳转到对应车位列表。</p>
           </div>
         </div>
 
@@ -53,17 +59,17 @@
         <div class="section-heading">
           <div>
             <h2>最近入场记录</h2>
-            <p>展示最近识别到的车辆，并支持跳转到记录列表继续追踪。</p>
+            <p>展示最近识别到的车辆，优先跳到记录详情，也支持继续按车牌追踪历史记录。</p>
           </div>
         </div>
 
         <div class="data-list">
           <button
             v-for="record in recentRecords"
-            :key="`${record.plate}-${record.time}`"
+            :key="`${record.id ?? record.plate}-${record.time}`"
             type="button"
             class="data-list__row data-list__row--action"
-            @click="goToRecordList(record.plate)"
+            @click="goToRecordTarget(record)"
           >
             <div class="data-list__main">
               <PlateTag :plate-number="record.plate" />
@@ -104,6 +110,44 @@ function resolveZoneKeyword(title: string) {
   return match ? `${match[1].toUpperCase()} 区` : title;
 }
 
+function buildTodayQuery() {
+  // 今日进场卡片直接带上当天日期范围，避免跳过去后仍看到全部记录。
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    dateFrom: today,
+    dateTo: today,
+  };
+}
+
+function goToStatTarget(label: string) {
+  // 首页统计卡片承担快捷入口角色，让总览数字可以直接钻取到对应页面。
+  if (label === "总车位") {
+    void router.push("/parking/spaces");
+    return;
+  }
+
+  if (label === "空闲车位") {
+    void router.push({
+      path: "/parking/spaces",
+      query: { status: "free" },
+    });
+    return;
+  }
+
+  if (label === "在场车辆") {
+    void router.push({
+      path: "/records",
+      query: { status: "busy" },
+    });
+    return;
+  }
+
+  void router.push({
+    path: "/records",
+    query: buildTodayQuery(),
+  });
+}
+
 function goToSpaceList(title: string) {
   void router.push({
     path: "/parking/spaces",
@@ -113,12 +157,17 @@ function goToSpaceList(title: string) {
   });
 }
 
-function goToRecordList(plate: string) {
-  // 最近记录优先跳到记录列表并带上车牌过滤条件，避免误判详情主键。
+function goToRecordTarget(record: RecentRecordItem) {
+  // 若后端已返回记录主键，则优先跳转详情；否则退回到列表筛选。
+  if (record.id) {
+    void router.push(`/records/${record.id}`);
+    return;
+  }
+
   void router.push({
     path: "/records",
     query: {
-      keyword: plate,
+      keyword: record.plate,
     },
   });
 }

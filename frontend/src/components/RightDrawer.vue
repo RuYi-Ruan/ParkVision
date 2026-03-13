@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-const props = withDefaults(
+withDefaults(
   defineProps<{
     modelValue: boolean;
     title: string;
@@ -41,7 +41,7 @@ const emit = defineEmits<{
 }>();
 
 function handleClose() {
-  // 抽屉关闭统一走 v-model，避免父组件和子组件状态不一致。
+  // 抽屉关闭统一走 v-model，避免父子组件状态不同步。
   emit("update:modelValue", false);
 }
 </script>

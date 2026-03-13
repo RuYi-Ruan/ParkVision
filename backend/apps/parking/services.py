@@ -1,11 +1,14 @@
-"""parking 模块的服务层。
+"""车位模块的服务层。
 
-车位列表、监控概览以及基础增删改都从数据库中动态处理。
+车位列表、监控概览、详情聚合和基础增删改都从数据库动态处理，
+后续接入识别结果时可以直接复用这里的结构。
 """
 
 from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import exceptions
+
+from apps.records.models import ParkingRecord
 
 from .models import ParkingSpace
 
@@ -15,6 +18,12 @@ STATUS_TYPE_MAP = {
     "维护": "warning",
 }
 
+RECORD_STATUS_TYPE_MAP = {
+    "在场": "busy",
+    "已离场": "free",
+    "异常": "warning",
+}
+
 
 def get_parking_module_info():
     """返回 parking 模块说明信息。"""
@@ -22,6 +31,26 @@ def get_parking_module_info():
         "module": "parking",
         "description": "Parking space management module.",
     }
+
+
+def _format_datetime(value):
+    """统一格式化车位详情中用到的时间字段。"""
+    if value is None:
+        return "--"
+    return timezone.localtime(value).strftime("%Y-%m-%d %H:%M")
+
+
+def _format_duration(record: ParkingRecord) -> str:
+    """将停车时长格式化为中文可读文本。"""
+    if record.record_status == "在场" or not record.duration_minutes:
+        return "进行中"
+
+    hours, minutes = divmod(record.duration_minutes, 60)
+    if hours > 0 and minutes > 0:
+        return f"{hours} 小时 {minutes} 分钟"
+    if hours > 0:
+        return f"{hours} 小时"
+    return f"{minutes} 分钟"
 
 
 def _serialize_space(space: ParkingSpace) -> dict:
@@ -36,6 +65,21 @@ def _serialize_space(space: ParkingSpace) -> dict:
         "type": STATUS_TYPE_MAP.get(space.status, "warning"),
         "floorNo": space.floor_no or "",
         "remark": space.remark or "",
+    }
+
+
+def _serialize_space_record(record: ParkingRecord) -> dict:
+    """整理车位详情页中的最近停车记录摘要。"""
+    return {
+        "id": record.id,
+        "recordNo": record.record_no,
+        "plate": record.plate_number,
+        "enterAt": _format_datetime(record.entry_time),
+        "leaveAt": _format_datetime(record.exit_time),
+        "duration": _format_duration(record),
+        "status": record.record_status,
+        "type": RECORD_STATUS_TYPE_MAP.get(record.record_status, "warning"),
+        "amount": f"{record.amount:.2f}",
     }
 
 
@@ -65,6 +109,29 @@ def list_parking_spaces(keyword="", status=""):
         queryset = queryset.filter(status=db_status) if db_status else queryset.none()
 
     return [_serialize_space(space) for space in queryset]
+
+
+def get_parking_space_detail(pk: int) -> dict:
+    """返回单个车位的档案详情与最近停车记录。"""
+    space = _get_space_or_raise(pk)
+    records = list(ParkingRecord.objects.filter(space_id=space.id).order_by("-entry_time")[:5])
+    active_record = next((record for record in records if record.record_status == "在场"), None)
+
+    return {
+        "id": space.id,
+        "code": space.space_code,
+        "zone": space.area_code,
+        "spaceType": space.space_type,
+        "status": space.status,
+        "type": STATUS_TYPE_MAP.get(space.status, "warning"),
+        "floorNo": space.floor_no or "--",
+        "remark": space.remark or "暂无备注",
+        "createdAt": _format_datetime(space.created_at),
+        "updatedAt": _format_datetime(space.updated_at),
+        "currentPlate": active_record.plate_number if active_record else "--",
+        "currentRecordId": active_record.id if active_record else None,
+        "recentRecords": [_serialize_space_record(record) for record in records],
+    }
 
 
 def create_parking_space(validated_data: dict) -> dict:

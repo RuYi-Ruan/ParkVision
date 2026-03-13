@@ -1,0 +1,20 @@
+{
+  "parking_rule": {
+    "free_minutes": 15,
+    "fee_per_hour": "6.00",
+    "daily_cap": "48.00",
+    "overdue_hours": 24
+  },
+  "recognition": {
+    "detect_confidence": "0.45",
+    "ocr_confidence": "0.60",
+    "yolo_model_path": "ai/weights/vehicle_yolo.pt",
+    "plate_model_path": "ai/weights/plate_yolo.pt"
+  },
+  "runtime": {
+    "default_zone": "主停车区 A 区",
+    "monitor_refresh_seconds": 30,
+    "auto_export_days": 30,
+    "retain_days": 365
+  }
+}

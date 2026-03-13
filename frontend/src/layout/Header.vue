@@ -12,10 +12,14 @@
 
     <div class="topbar__meta">
       <div class="topbar__chip">实时同步</div>
+      <div class="topbar__scope">
+        <span class="topbar__scope-badge">{{ userStore.roleBadge }}</span>
+        <span class="topbar__scope-copy">{{ userStore.permissionSummary }}</span>
+      </div>
       <div class="topbar__profile">
         <div class="topbar__avatar">管</div>
         <div class="topbar__profile-copy">
-          <strong>{{ userStore.username }}</strong>
+          <strong>{{ userStore.displayName }}</strong>
           <span>{{ userStore.roleName }}</span>
         </div>
       </div>
@@ -30,7 +34,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useAppStore } from "@/store/app";
 import { useUserStore } from "@/store/user";
 
-// 顶栏同时承担页面标题展示、侧边栏控制和退出登录三个职责。
+// 顶栏同时承担页面标题展示、侧边栏控制和退出登录三项职责。
 const appStore = useAppStore();
 const userStore = useUserStore();
 const route = useRoute();

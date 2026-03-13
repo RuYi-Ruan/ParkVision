@@ -50,6 +50,7 @@ def get_dashboard_overview():
 
     recent_records = [
         {
+            "id": record.id,
             "plate": record.plate_number,
             "time": timezone.localtime(record.entry_time).strftime("%H:%M"),
             "gate": record.entry_gate or "未知入口",
